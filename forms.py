@@ -6,6 +6,21 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.models import User
 from django.template import loader
 from django.utils.translation import ugettext as _
+from django.contrib.localflavor.us.forms import USStateField
+
+from common import models as common_models
+
+
+class AddressForm(forms.ModelForm):
+    address = forms.CharField(label=_('Address'), widget=forms.TextInput(attrs={'placeholder': _('Street Address')}))
+    address_2 = forms.CharField(label='', widget=forms.TextInput(attrs={'placeholder': _('Street Address Cont.')}), required=False)
+    city = forms.CharField(label=_('City'), widget=forms.TextInput(attrs={'placeholder': _('City')}))
+    state = USStateField(widget=forms.TextInput(attrs={'placeholder': _('State'), 'maxlength': '2'}))
+    zip = forms.CharField(label=_('ZIP'), widget=forms.TextInput(attrs={'placeholder': _('ZIP'), 'maxlength': '5'}))
+
+    class Meta:
+        fields = ('address', 'address_2', 'city', 'state', 'zip')
+
 
 class RequiredNullBooleanField(forms.NullBooleanField):
     widget = forms.RadioSelect(choices=[(True, "Yes"), (False, "No")])
