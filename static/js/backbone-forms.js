@@ -1,6 +1,22 @@
 ;(function() {
     
+    //Support paths for nested attributes e.g. 'user.name'
+    function getNested(obj, path) {
+        var fields = path.split(".");
+        var result = obj;
+        for (var i = 0, n = fields.length; i < n; i++) {
+            result = result[fields[i]];
+        }
+        return result;
+    }
+    
+    function getNestedSchema(obj, path) {
+        path = path.replace(/\./g, '.subSchema.');
+        return getNested(obj, path);
+    }
+    
     var helpers = {};
+    var validators = {};
     
     /**
      * This function is used to transform the key from a schema into the title used in a label.
@@ -14,7 +30,7 @@
      */
     helpers.keyToTitle = function(str) {
         //Add spaces
-        var str = str.replace(/([A-Z])/g, ' $1');
+        str = str.replace(/([A-Z])/g, ' $1');
 
         //Uppercase first character
         str = str.replace(/^./, function(str) { return str.toUpperCase(); });
@@ -33,7 +49,7 @@
         var _interpolateBackup = _.templateSettings.interpolate;
 
         //Set custom template settings
-        _.templateSettings.interpolate = /\{\{(.+?)\}\}/g
+        _.templateSettings.interpolate = /\{\{(.+?)\}\}/g;
 
         var template = _.template(str);
 
@@ -62,7 +78,62 @@
             constructorFn = schemaType;
 
         return new constructorFn(options);
+    };
+    
+    /**
+     * Triggers an event that can be cancelled. Requires the user to invoke a callback. If false
+     * is passed to the callback, the action does not run.
+     * 
+     * @param {Mixed}       Instance of Backbone model, view, collection to trigger event on
+     * @param {String}      Event name
+     * @param {Array}       Arguments to pass to the event handlers
+     * @param {Function}    Callback to run after the event handler has run.
+     *                      If any of them passed false or error, this callback won't run
+     */ 
+    helpers.triggerCancellableEvent = function(subject, event, args, callback) {
+        var eventHandlers = subject._callbacks[event] || [];
+        
+        if (!eventHandlers.length) return callback();
+        
+        var fn = eventHandlers[0][0],
+            context = eventHandlers[0][1] || this;
+        
+        //Add the callback that will be used when done
+        args.push(callback);
+        
+        fn.apply(context, args);
     }
+
+    helpers.getValidator = function(validator) {
+        var isRegExp = _(validator).isRegExp();
+        if (isRegExp || validator['RegExp']) {
+            if (!isRegExp) {
+                validator = new RegExp(validator['RegExp']);
+            }
+            return function (value) {
+                if (!validator.test(value)) {
+                    return 'Value '+value+' does not pass validation against regular expression '+validator;
+                }
+            };
+        } else if (_(validator).isString()) {
+            if (validators[validator]) {
+                return validators[validator];
+            } else {
+                throw 'Validator "'+validator+'" not found';
+            }
+        } else if (_(validator).isFunction()) {
+            return validator;
+        } else {
+            throw 'Could not process validator' + validator;
+        }
+    };
+
+    validators.required = function (value) {
+        var exists = (value === 0 || !!value);
+        if (!exists) {
+            return 'This field is required';
+        }
+    };
     
 
     var Form = Backbone.View.extend({
@@ -70,7 +141,7 @@
         //Field views
         fields: null,
 
-        tagName: 'ul',
+        tagName: 'fieldset',
         
         className: 'bbf-form',
 
@@ -88,38 +159,66 @@
             this.model = options.model;
             this.data = options.data;
             this.fieldsToRender = options.fields || _.keys(this.schema);
+            this.fieldsets = options.fieldsets;
             this.idPrefix = options.idPrefix || '';
 
             //Stores all Field views
             this.fields = {};
-
-            this.errors = {};
         },
 
         /**
          * Renders the form and all fields
          */
         render: function() {
+            var fieldsToRender = this.fieldsToRender,
+                fieldsets = this.fieldsets,
+                el = $(this.el),
+                self = this;
+
+            if (fieldsets) {
+                _.each(fieldsets, function (fs) {
+                    if (_(fs).isArray()) {
+                        fs = {'fields': fs};
+                    }
+
+                    var fieldset = $('<fieldset><ul>');
+
+                    if (fs.legend) {
+                        fieldset.append($('<legend>').html(fs.legend));
+                    }
+                    self.renderFields(fs.fields, fieldset.find('ul'));
+                    el.append(fieldset);
+                });
+            } else {
+                var target = $('<ul>');
+                el.append(target)
+                this.renderFields(fieldsToRender, target);
+            }
+
+            return this;
+        },
+
+        /**
+         * Render a list of fields. Returns the rendered Field object.
+         */
+        renderFields: function (fieldsToRender, el) {
             var schema = this.schema,
                 model = this.model,
                 data = this.data,
-                fieldsToRender = this.fieldsToRender,
                 fields = this.fields,
-                el = $(this.el).html(''),
-                errors = this.errors,
+                el = el || $(this.el),
                 self = this;
-
+            
             //Create form fields
             _.each(fieldsToRender, function(key) {
-                var itemSchema = schema[key];
+                var itemSchema = getNestedSchema(schema, key);
 
                 if (!itemSchema) throw "Field '"+key+"' not found in schema";
 
                 var options = {
                     key: key,
                     schema: itemSchema,
-                    idPrefix: self.idPrefix,
-                    errors: errors[key]
+                    idPrefix: self.idPrefix
                 };
 
                 if (model) {
@@ -132,12 +231,40 @@
 
                 var field = new Field(options);
 
-                el.append(field.render().el);
+                //Render the fields with editors, apart from Hidden fields
+                if (itemSchema.type == 'Hidden') {
+                    field.editor = helpers.createEditor('Hidden', options);
+                } else {
+                    el.append(field.render().el);
+                }
 
                 fields[key] = field;
             });
+        },
 
-            return this;
+        /**
+         * Validate the data
+         *
+         * @return {Object} Validation errors
+         */
+        validate: function() {
+            var fields = this.fields,
+                model = this.model,
+                errors = {};
+
+            _.each(fields, function(field) {
+                var error = field.validate();
+                if (error) {
+                    errors[field.key] = error;
+                }
+            });
+
+            if (model && model.validate) {
+                var modelErrors = model.validate(this.getValue());
+                if (modelErrors) errors._nonFieldErrors = modelErrors;
+            }
+
+            return _.isEmpty(errors) ? null : errors;
         },
 
         /**
@@ -146,8 +273,13 @@
          * @return {Object}  Validation errors
          */
         commit: function() {
-            var fields = this.fields,
-                errors = {};
+            var fields = this.fields;
+
+            var errors = this.validate();
+
+            if (errors) {
+                return errors;
+            }
 
             _.each(fields, function(field) {
                 var error = field.commit();
@@ -214,14 +346,8 @@
         className: 'bbf-field',
 
         events: {
-            // 'click label': 'logValue'
+            'click label': 'logValue'
         },
-        
-        template: helpers.createTemplate('\
-            {{ error }}\
-             <label for="{{id}}">{{title}}</label>\
-             <div class="bbf-editor"></div>\
-        '),
 
         /**
          * @param {Object}  Options
@@ -239,7 +365,6 @@
             this.value = options.value;
             this.model = options.model;
             this.idPrefix = options.idPrefix || '';
-            this.errors = options.errors || {};
 
             //Set schema defaults
             var schema = this.schema;
@@ -250,6 +375,8 @@
         render: function() {
             var schema = this.schema,
                 el = $(this.el);
+
+            el.addClass('bbf-field' + schema.type);
 
             //Standard options that will go to all editors
             var options = {
@@ -268,11 +395,11 @@
             //Decide on the editor to use
             var editor = helpers.createEditor(schema.type, options);
 
-            el.html(this.template({
+            el.html(Field.template({
                 key: this.key,
                 title: schema.title,
                 id: editor.id,
-                error: this.errors && this.errors[0]
+                type: schema.type
             }));
 
             //Add the editor
@@ -281,6 +408,13 @@
             this.editor = editor;
 
             return this;
+        },
+
+        /**
+         * Validate the value from the editor
+         */
+        validate: function() {
+            return this.editor.validate();
         },
 
         /**
@@ -315,6 +449,14 @@
             Backbone.View.prototype.remove.call(this);
         }
 
+    },  {
+        
+        //Static
+        template: helpers.createTemplate('\
+             <label for="{{id}}">{{title}}</label>\
+             <div class="bbf-editor bbf-editor{{type}}"></div>\
+        ')
+        
     });
 
 
@@ -356,9 +498,8 @@
             
             if (this.value === undefined) this.value = this.defaultValue;
 
-            this.schema = options.schema;
-
-            $(this.el).addClass('bbf-field-' + this.key);
+            this.schema = options.schema || {};
+            this.validators = options.validators || this.schema.validators;
         },
 
         getValue: function() {
@@ -370,28 +511,50 @@
         },
 
         /**
+         * Check the validity of a particular field
+         */
+        validate: function () {
+            var el = $(this.el),
+                error = null,
+                value = this.getValue();
+
+            if (this.validators) {
+                _(this.validators).each(function(validator) {
+                    if (!error) {
+                        error = helpers.getValidator(validator)(value);
+                    }
+                });
+            }
+
+            if (!error && this.model && this.model.validate) {
+                var change = {};
+                change[this.key] = value;
+                error = this.model.validate(change);
+            }
+
+            if (error) {
+                el.addClass('bbf-error');
+            } else {
+                el.removeClass('bbf-error');
+            }
+
+            return error;
+        },
+
+        /**
          * Update the model with the new value from the editor
          *
          * @return {Error|null} Validation error or null
          */
         commit: function() {
-            var el = $(this.el),
-                change = {};
-
+            var error = null;
+            var change = {};
             change[this.key] = this.getValue();
-
-            var error = null
             this.model.set(change, {
-                silent: true,
                 error: function(model, e) {
                     error = e;
                 }
             });
-
-            if (error)
-                el.addClass('bbf-error');
-            else
-                el.removeClass('bbf-error');
 
             return error;
         }
@@ -403,11 +566,16 @@
         tagName: 'input',
 
         defaultValue: '',
-
-        initialize: function(options) {
+        
+        initialize: function(options) {            
             editors.Base.prototype.initialize.call(this, options);
+            
+            //Allow customising text type (email, phone etc.) for HTML5 browsers
+            var type = 'text';
+            
+            if (this.schema && this.schema.dataType) type = this.schema.dataType;
 
-            $(this.el).attr('type', 'text');
+            $(this.el).attr('type', type);
         },
 
         /**
@@ -461,11 +629,13 @@
         },
 
         getValue: function() {        
-            return parseFloat($(this.el).val(), 10);
+            var value = $(this.el).val();
+            
+            return value === "" ? null : parseFloat(value, 10);
         },
         
         setValue: function(value) {
-            value = parseFloat(value, 10);
+            value = value === null ? null : parseFloat(value, 10);
             
             editors.Text.prototype.setValue.call(this, value);
         }
@@ -476,7 +646,7 @@
     editors.Password = editors.Text.extend({
 
         initialize: function(options) {
-            editors.Text.prototype.initialize.call(this);
+            editors.Text.prototype.initialize.call(this, options);
 
             $(this.el).attr('type', 'password');
         }
@@ -486,7 +656,60 @@
 
     editors.TextArea = editors.Text.extend({
 
-       tagName: 'textarea',
+       tagName: 'textarea'
+
+    });
+    
+    
+    editors.Checkbox = editors.Base.extend({
+        
+        defaultValue: false,
+        
+        tagName: 'input',
+        
+        initialize: function(options) {
+            editors.Base.prototype.initialize.call(this, options);
+            
+            $(this.el).attr('type', 'checkbox');
+        },
+
+        /**
+         * Adds the editor to the DOM
+         */
+        render: function() {
+            this.setValue(this.value);
+
+            return this;
+        },
+        
+        getValue: function() {
+            return $(this.el).attr('checked') ? true : false;
+        },
+        
+        setValue: function(value) {
+            $(this.el).attr('checked', value);
+        }
+        
+    });
+    
+    
+    editors.Hidden = editors.Base.extend({
+        
+        defaultValue: '',
+
+        initialize: function(options) {
+            editors.Text.prototype.initialize.call(this, options);
+
+            $(this.el).attr('type', 'hidden');
+        },
+        
+        getValue: function() {
+            return this.value;
+        },
+        
+        setValue: function(value) {
+            this.value = value;
+        }
 
     });
 
@@ -623,7 +846,60 @@
             });
 
             return html.join('');
+        }
+
+    });
+
+
+
+
+    /**
+     * Renders a <ul> with given options represented as <li> objects containing radio buttons
+     *
+     * Requires an 'options' value on the schema.
+     *  Can be an array of options, a function that calls back with the array of options, a string of HTML
+     *  or a Backbone collection. If a collection, the models must implement a toString() method
+     */
+    editors.Radio = editors.Select.extend({
+
+        tagName: 'ul',
+        className: 'bbf-radio',
+
+        getValue: function() {
+            return this.$('input[type=radio]:checked').val();
         },
+
+        setValue: function(value) {
+            return this.$('input[type=radio][value='+value+']').attr({checked: 'checked'});
+        },
+
+        /**
+         * Create the radio list HTML
+         * @param {Array}   Options as a simple array e.g. ['option1', 'option2']
+         *                      or as an array of objects e.g. [{val: 543, label: 'Title for object 543'}]
+         * @return {String} HTML
+         */
+        _arrayToHtml: function (array) {
+            var html = [];
+            var self = this;
+
+            _.each(array, function(option, index) {
+                var itemHtml = '<li>';
+                if (_.isObject(option)) {
+                    var val = option.val ? option.val : '';
+                    itemHtml += ('<input type="radio" name="'+self.id+'" value="'+val+'" id="'+self.id+'-'+index+'" />')
+                    itemHtml += ('<label for="'+self.id+'-'+index+'">'+option.label+'</label>')
+                }
+                else {
+                    itemHtml += ('<input type="radio" name="'+self.id+'" value="'+option+'" id="'+self.id+'-'+index+'" />')
+                    itemHtml += ('<label for="'+self.id+'-'+index+'">'+option+'</label>')
+                }
+                itemHtml += '</li>';
+                html.push(itemHtml);
+            });
+
+            return html.join('');
+        }
 
     });
 
@@ -749,6 +1025,7 @@
     Form.helpers = helpers;
     Form.Field = Field;
     Form.editors = editors;
+    Form.validators = validators;
     Backbone.Form = Form;
 
 })();
