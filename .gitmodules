@@ -1,0 +1,3 @@
+[submodule "static/backbone-forms"]
+	path = static/backbone-forms
+	url = git@github.com:elasticsales/backbone-forms.git
