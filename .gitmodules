@@ -1,3 +1,6 @@
 [submodule "static/backbone-forms"]
 	path = static/backbone-forms
 	url = git@github.com:elasticsales/backbone-forms.git
+[submodule "static/jquery-autosave"]
+	path = static/jquery-autosave
+	url = https://github.com/nervetattoo/jquery-autosave.git
