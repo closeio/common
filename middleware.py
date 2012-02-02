@@ -63,3 +63,11 @@ class LastLoginMiddleware(object):
         if request.user and request.user.is_authenticated():
             request.user.last_login = datetime.datetime.utcnow()
             request.user.save()
+
+
+class LastLoginByTemplatedResponseMiddleware(object):
+    def process_template_response(self, request, response):
+        if request.user and request.user.is_authenticated():
+            request.user.last_login = datetime.datetime.utcnow()
+            request.user.save()
+        return response
