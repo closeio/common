@@ -1,9 +1,13 @@
+from phonenumbers import PhoneNumber
+from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, is_possible_number
+
 from django.db import models
 from django import forms
 from django.utils import simplejson as json
+
 from common.utils import dumps, loads, Encoder
-from phonenumbers import PhoneNumber
-from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, is_possible_number
+from common.validators import valid_us_phone
+
 
 def _format_number(value):
     phone = parse(value, 'US')
@@ -104,15 +108,8 @@ class PhoneNumberField(models.CharField):
 
 class PhoneNumberFormField(forms.CharField):
     def __init__(self, *args, **kwargs):
+        validators = kwargs.get('validators', [])
+        validators.append(valid_us_phone)
+        kwargs['validators'] = validators
         super(PhoneNumberFormField, self).__init__(*args, **kwargs)
 
-    def clean(self, value):
-        if not value: return
-        try:
-            number = parse(value,"US")
-            if is_possible_number(number):
-                return format_number(number,PhoneNumberFormat.INTERNATIONAL)
-            else:
-                raise(Exception("invalid phone number"))
-        except Exception, exc:
-            raise forms.ValidationError(u'Phone Number Parsing error: %s' % (unicode(exc),))
