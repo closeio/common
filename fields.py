@@ -6,7 +6,6 @@ from django import forms
 from django.utils import simplejson as json
 
 from common.utils import dumps, loads, Encoder
-from common.validators import valid_us_phone
 
 
 class JSONWidget(forms.Textarea):
@@ -66,12 +65,6 @@ add_introspection_rules([], ["^common\.fields\.PhoneNumberField"])
 class PhoneNumberField(models.CharField):
     __metaclass__ = models.SubfieldBase
     
-    def __init__(self, **kwargs):
-        validators = kwargs.get('validators', [])
-        validators.append(valid_us_phone)
-        kwargs['validators'] = validators
-        super(PhoneNumberField, self).__init__(**kwargs)
-
     def get_db_prep_value(self, value, connection, prepared=False):
         try:
             return format_us_phone_number(value)
