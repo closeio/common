@@ -1,3 +1,10 @@
+import datetime
+from decimal import Decimal
+import os
+import hashlib
+import operator
+import re
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.db.models import Q
@@ -10,13 +17,7 @@ from django.utils.hashcompat import md5_constructor
 from django.utils.http import urlquote
 from functional import compose
 
-import datetime
-from decimal import Decimal
-import os
-import hashlib
-import operator
-import re
-
+from phonenumbers.phonenumberutil import format_number, parse
 
 
 def get_image_filename(prefix, obj, filename):
@@ -33,6 +34,7 @@ def invalidate_template_cache(fragment_name, *variables):
     args = md5_constructor(u':'.join(apply(compose(urlquote, unicode), variables)))
     cache_key = 'template.cache.%s.%s' % (fragment_name, args.hexdigest())
     cache.delete(cache_key)
+
 
 def mail_exception(subject=None, context=None, vars=True):
     import traceback, sys
@@ -161,8 +163,10 @@ class Encoder(json.JSONEncoder):
             return str(obj)
         return obj
 
+
 def dumps(obj, **params):
     return json.dumps(obj, cls=Encoder, **params)
+
 
 def loads(obj):
     return json.loads(obj)
@@ -282,7 +286,6 @@ def sql(cursor, sql):
     return rows
 
 
-
 def render_html_email(name, context):
     import pynliner
 
@@ -297,10 +300,12 @@ def render_html_email(name, context):
 
     return subject, text_body, html_body
 
+
 def use_ssl():
     if hasattr(settings, 'USE_SSL'):
         return settings.USE_SSL
     return False
+
 
 def full_url_context(request):
     return {
@@ -308,6 +313,7 @@ def full_url_context(request):
         'MEDIA_URL': full_url(settings.MEDIA_URL),
         'BASE_URL': 'http%s://%s' % (use_ssl() and 's' or '', Site.objects.get_current().domain),
     }
+
 
 def send_html_email(request, recipient, name, extra_context, sender=None, mixpanel_campaign=None):
 
@@ -333,7 +339,15 @@ def send_html_email(request, recipient, name, extra_context, sender=None, mixpan
     else:
         from_email = settings.DEFAULT_FROM_EMAIL
 
-
     message = EmailMultiAlternatives(subject, text, from_email, [recipient])
     message.attach_alternative(html, 'text/html')
     message.send()
+
+
+def format_us_phone_number(value):
+    phone = parse(value, 'US')
+    formatted = format_number(phone, PhoneNumberFormat.E164)
+    if phone.extension:
+        formatted += 'x%s' % phone.extension
+    return formatted
+

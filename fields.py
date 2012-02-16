@@ -9,14 +9,6 @@ from common.utils import dumps, loads, Encoder
 from common.validators import valid_us_phone
 
 
-def _format_number(value):
-    phone = parse(value, 'US')
-    formatted = format_number(phone, PhoneNumberFormat.E164)
-    if phone.extension:
-        formatted += 'x%s' % phone.extension
-    return formatted
-
-
 class JSONWidget(forms.Textarea):
     def render(self, name, value, attrs=None):
         if not isinstance(value, basestring):
@@ -82,14 +74,13 @@ class PhoneNumberField(models.CharField):
 
     def get_db_prep_value(self, value, connection, prepared=False):
         try:
-            return _format_number(value)
+            return format_us_phone_number(value)
         except:
             return value
     
     def to_python(self, value):
         if isinstance(value, basestring) and value != '':
             try:
-                #value = _format_number(value)
                 value = format_number(parse(value,"US"),PhoneNumberFormat.INTERNATIONAL)
             except:
                 pass
@@ -98,7 +89,7 @@ class PhoneNumberField(models.CharField):
     def get_db_prep_save(self, value, **kwargs):
         if value is None: return
         try:
-            return _format_number(value)
+            return format_us_phone_number(value)
         except:
             return value
     
