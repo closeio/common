@@ -1,5 +1,5 @@
 from phonenumbers import PhoneNumber
-from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, is_possible_number
+from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat
 
 from django.db import models
 from django import forms
