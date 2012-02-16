@@ -21,6 +21,7 @@ class Base(models.Model):
         ordering = ('-date_created',)
 
     def save(self, *args, **kwargs):
+        self.full_clean() #enforce model level validation
         now = datetime.datetime.utcnow()
         if not self.pk and not self.date_created:
             self.date_created = now

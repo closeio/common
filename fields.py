@@ -74,9 +74,12 @@ add_introspection_rules([], ["^common\.fields\.PhoneNumberField"])
 class PhoneNumberField(models.CharField):
     __metaclass__ = models.SubfieldBase
     
-    def formfield(self, **kwargs):
-        return super(PhoneNumberField, self).formfield(form_class=PhoneNumberFormField, **kwargs)
-    
+    def __init__(self, **kwargs):
+        validators = kwargs.get('validators', [])
+        validators.append(valid_us_phone)
+        kwargs['validators'] = validators
+        super(PhoneNumberField, self).__init__(**kwargs)
+
     def get_db_prep_value(self, value, connection, prepared=False):
         try:
             return _format_number(value)
@@ -105,11 +108,4 @@ class PhoneNumberField(models.CharField):
             return format_number(parse(value,"US"),PhoneNumberFormat.INTERNATIONAL)
         except:
             return value
-
-class PhoneNumberFormField(forms.CharField):
-    def __init__(self, *args, **kwargs):
-        validators = kwargs.get('validators', [])
-        validators.append(valid_us_phone)
-        kwargs['validators'] = validators
-        super(PhoneNumberFormField, self).__init__(*args, **kwargs)
 
