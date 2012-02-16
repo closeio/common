@@ -5,7 +5,7 @@ from django.db import models
 from django import forms
 from django.utils import simplejson as json
 
-from common.utils import dumps, loads, Encoder
+from common.utils import dumps, loads, Encoder, format_us_phone_number
 
 
 class JSONWidget(forms.Textarea):
