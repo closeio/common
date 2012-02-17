@@ -1,5 +1,5 @@
 from phonenumbers import PhoneNumber
-from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat
+from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 
 from django.db import models
 from django import forms
@@ -68,14 +68,14 @@ class PhoneNumberField(models.CharField):
     def get_db_prep_value(self, value, connection, prepared=False):
         try:
             return format_us_phone_number(value)
-        except:
+        except NumberParseException:
             return value
     
     def to_python(self, value):
         if isinstance(value, basestring) and value != '':
             try:
                 value = format_number(parse(value,"US"),PhoneNumberFormat.INTERNATIONAL)
-            except:
+            except NumberParseException:
                 pass
         return value
     
@@ -83,13 +83,12 @@ class PhoneNumberField(models.CharField):
         if value is None: return
         try:
             return format_us_phone_number(value)
-        except:
+        except NumberParseException:
             return value
     
     def value_to_string(self, obj):
         value = self._get_val_from_obj(obj)
         try:
             return format_number(parse(value,"US"),PhoneNumberFormat.INTERNATIONAL)
-        except:
+        except NumberParseException:
             return value
-

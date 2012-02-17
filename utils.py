@@ -17,7 +17,7 @@ from django.utils.hashcompat import md5_constructor
 from django.utils.http import urlquote
 from functional import compose
 
-from phonenumbers.phonenumberutil import format_number, parse
+from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat
 
 
 def get_image_filename(prefix, obj, filename):
