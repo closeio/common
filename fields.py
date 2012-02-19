@@ -1,7 +1,7 @@
 from phonenumbers import PhoneNumber
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 
-from django.db import models
+from django.db import models, router
 from django import forms
 from django.utils import simplejson as json
 
@@ -92,3 +92,38 @@ class PhoneNumberField(models.CharField):
             return format_number(parse(value,"US"),PhoneNumberFormat.INTERNATIONAL)
         except NumberParseException:
             return value
+
+
+class CustomForeignKey(models.ForeignKey):
+    def __init__(self, *args, **kwargs):
+        try:
+            self.related_validation_manager = kwargs.pop('related_validation_manager')
+        except KeyError:
+            self.related_validation_manager = '_default_manager'
+        super(CustomForeignKey, self).__init__(*args, **kwargs)
+
+    def validate(self, value, model_instance):
+        if self.rel.parent_link:
+            return
+        super(models.ForeignKey, self).validate(value, model_instance)
+        if value is None:
+            return
+        
+        using = router.db_for_read(model_instance.__class__, instance=model_instance)
+        qs = getattr(self.rel.to, self.related_validation_manager).using(using).filter(
+                **{self.rel.field_name: value}
+             ) 
+        qs = qs.complex_filter(self.rel.limit_choices_to)
+        if not qs.exists():
+            raise exceptions.ValidationError(self.error_messages['invalid'] % {
+                'model': self.rel.to._meta.verbose_name, 'pk': value})
+
+add_introspection_rules([
+    (
+        [CustomForeignKey], # Class(es) these apply to
+        [],         # Positional arguments (not used)
+        {           # Keyword argument
+            "related_validation_manager": ["related_validation_manager", {"default": "_default_manager"}],
+        },
+    ),
+], ["^common\.fields\.CustomForeignKey"])
