@@ -11,10 +11,11 @@ class DebugSQLMiddleware(object):
             raise MiddlewareNotUsed()
 
     def process_response(self, request, response):
-        from django.db import connection
-        for q in connection.queries:
-            print q.get('duration', q.get('time')), q
-            print
+        if not request.path.startswith(settings.STATIC_URL) and not request.path == '/favicon.ico':
+            from django.db import connection
+            for q in connection.queries:
+                print q.get('duration', q.get('time')), q
+                print
         return response
 
 
