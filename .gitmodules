@@ -4,3 +4,6 @@
 [submodule "static/jquery-autosave"]
 	path = static/jquery-autosave
 	url = https://github.com/nervetattoo/jquery-autosave.git
+[submodule "static/bootstrap"]
+	path = static/bootstrap
+	url = https://github.com/twitter/bootstrap.git
