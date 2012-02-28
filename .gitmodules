@@ -7,3 +7,6 @@
 [submodule "static/bootstrap"]
 	path = static/bootstrap
 	url = https://github.com/twitter/bootstrap.git
+[submodule "static/jquery-timeago"]
+	path = static/jquery-timeago
+	url = https://github.com/rmm5t/jquery-timeago.git
