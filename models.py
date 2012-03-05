@@ -23,9 +23,11 @@ class Base(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean() #enforce model level validation
         now = datetime.datetime.utcnow()
-        if not self.pk and not self.date_created:
-            self.date_created = now
-        self.date_updated = now
+        update_timestamps = kwargs.pop('update_timestamps', True)
+        if update_timestamps:
+            if not self.pk and not self.date_created:
+                self.date_created = now
+            self.date_updated = now
         super(Base, self).save(*args, **kwargs)
 
 
