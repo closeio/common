@@ -12,6 +12,11 @@ EmailField._original__init__ = EmailField.__init__
 EmailField.__init__ = email_field_init
 
 
+class ActiveManager(models.Manager):
+    def get_query_set(self):
+        return super(ActiveManager, self).get_query_set().filter(is_active=True)
+
+
 class Base(models.Model):
     date_created = models.DateTimeField(blank=True, editable=False)
     date_updated = models.DateTimeField(null=True, blank=True, editable=False)
