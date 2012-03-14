@@ -35,6 +35,13 @@ class Base(models.Model):
             self.date_updated = now
         super(Base, self).save(*args, **kwargs)
 
+    def has_changed(instance, field):
+        """Determine if an attribute has changed since the last save()"""
+        if not instance.pk:
+            return False
+        old_value = instance.__class__._default_manager.filter(pk=instance.pk).values(field).get()[field]
+        return not getattr(instance, field) == old_value
+
 
 class Address(Base):
     address = models.CharField(max_length=80)
