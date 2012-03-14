@@ -37,6 +37,7 @@ class Base(models.Model):
 
     def has_changed(instance, field):
         """Determine if an attribute has changed since the last save()"""
+        # http://zmsmith.com/2010/05/django-check-if-a-field-has-changed/
         if not instance.pk:
             return False
         old_value = instance.__class__._default_manager.filter(pk=instance.pk).values(field).get()[field]
