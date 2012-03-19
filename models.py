@@ -25,6 +25,10 @@ class Base(models.Model):
         abstract = True
         ordering = ('-date_created',)
 
+    def __init__(self, *args, **kwargs):
+        super(Base, self).__init__(*args, **kwargs)
+        self._original_values = self.__dict__.copy()
+
     def save(self, *args, **kwargs):
         if not kwargs.pop('skip_validation', False):
             self.full_clean() #enforce model level validation
@@ -36,13 +40,13 @@ class Base(models.Model):
             self.date_updated = now
         super(Base, self).save(*args, **kwargs)
 
-    def has_changed(instance, field):
+        self._original_values = self.__dict__.copy()
+
+    def has_changed(self, field):
         """Determine if an attribute has changed since the last save()"""
-        # http://zmsmith.com/2010/05/django-check-if-a-field-has-changed/
-        if not instance.pk:
+        if not self.pk:
             return False
-        old_value = instance.__class__._default_manager.filter(pk=instance.pk).values(field).get()[field]
-        return not getattr(instance, field) == old_value
+        return getattr(self, field) != self._original_values[field]
 
 
 class Address(Base):
