@@ -26,7 +26,8 @@ class Base(models.Model):
         ordering = ('-date_created',)
 
     def save(self, *args, **kwargs):
-        self.full_clean() #enforce model level validation
+        if not kwargs.pop('skip_validation', False):
+            self.full_clean() #enforce model level validation
         now = datetime.datetime.utcnow()
         update_timestamps = kwargs.pop('update_timestamps', True)
         if update_timestamps:
