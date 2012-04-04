@@ -4,6 +4,8 @@ from django.db import models
 from django.db.models.fields import EmailField
 from django.contrib.localflavor.us.us_states import STATE_CHOICES
 
+from common import fields as common_fields
+
 
 def email_field_init(self, *args, **kwargs):
     kwargs['max_length'] = kwargs.get('max_length', 254)
