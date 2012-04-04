@@ -10,3 +10,6 @@
 [submodule "static/jquery-timeago"]
 	path = static/jquery-timeago
 	url = git@github.com:elasticsales/jquery-timeago.git
+[submodule "static/jquery-autoresize"]
+	path = static/jquery-autoresize
+	url = git@github.com:elasticsales/jQuery.fn.autoResize.git
