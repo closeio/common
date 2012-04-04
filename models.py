@@ -69,6 +69,7 @@ class Address(Base):
         return '\n'.join([part for part in [
             self.address,
             self.address_2,
-            '%s, %s %s' % (self.city, self.state, self.zip)
+            '%s, %s %s' % (self.city, self.state, self.zip),
+            self.country
             ] if part])
 
