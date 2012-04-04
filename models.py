@@ -50,11 +50,12 @@ class Base(models.Model):
 
 
 class Address(Base):
-    address = models.CharField(max_length=80)
-    address_2 = models.CharField(null=True, blank=True, max_length=80)
-    city = models.CharField(null=True, blank=True, max_length=40)
-    state = models.CharField(null=True, blank=True, max_length=2, choices=STATE_CHOICES)
-    zip = models.CharField(max_length=5)
+    address = models.CharField(max_length=255, blank=True)
+    address_2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=255, blank=True)
+    state = models.CharField(max_length=255, blank=True, choices=STATE_CHOICES)
+    zip = models.CharField(max_length=255, blank=True)
+    country = common_fields.CountryField(blank=True, default=common_fields.COUNTRIES[0][0]) #USA!
 
     class Meta:
         abstract = True
