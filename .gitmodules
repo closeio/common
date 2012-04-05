@@ -13,3 +13,6 @@
 [submodule "static/jquery-autoresize"]
 	path = static/jquery-autoresize
 	url = git@github.com:elasticsales/jQuery.fn.autoResize.git
+[submodule "static/jQuery-Timepicker-Addon"]
+	path = static/jQuery-Timepicker-Addon
+	url = git@github.com:elasticsales/jQuery-Timepicker-Addon.git
