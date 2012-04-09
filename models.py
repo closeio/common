@@ -55,7 +55,7 @@ class Address(Base):
     address = models.CharField(max_length=255, blank=True)
     address_2 = models.CharField(max_length=255, blank=True)
     city = models.CharField(max_length=255, blank=True)
-    state = models.CharField(max_length=255, blank=True, choices=STATE_CHOICES)
+    state = models.CharField(max_length=255, blank=True) #problematic for non-US states so eliminated choices=STATES
     zip = models.CharField(max_length=255, blank=True)
     country = common_fields.CountryField(blank=True, default=common_fields.COUNTRIES[0][0]) #USA!
 
