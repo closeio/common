@@ -60,7 +60,7 @@ class BaseMultipleFormsView(MultipleFormsMixin, ProcessMultipleFormsView):
 
 class MultipleFormsView(TemplateResponseMixin, BaseMultipleFormsView):
     """
-    A view for displaing several forms, and rendering a template response.
+    A view for displaying several forms, and rendering a template response.
     """
 
 
