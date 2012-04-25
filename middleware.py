@@ -78,10 +78,23 @@ import threading
 from collections import defaultdict
 
 _thread_locals = threading.local()
+_installed_middleware = False
+
+class RequestCacheMiddleware(object):
+    def __init__(self):
+        global _installed_middleware
+        _installed_middleware = True
+
+    def process_request(self, request):
+        request_cache = getattr(_thread_locals, 'request_cache', None)
+        if request_cache:
+            request_cache.clear()
 
 def get_request_cache():
+    assert _installed_middleware, 'RequestCacheMiddleware not loaded'
+
     request_cache = getattr(_thread_locals, 'request_cache', None)
-    if not request_cache:
+    if request_cache is None:
         request_cache = defaultdict(lambda: None)
         _thread_locals.request_cache = request_cache
     return request_cache
