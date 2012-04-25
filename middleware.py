@@ -72,3 +72,16 @@ class LastLoginByTemplatedResponseMiddleware(object):
             request.user.last_login = datetime.datetime.utcnow()
             request.user.save()
         return response
+
+
+import threading
+from collections import defaultdict
+
+_thread_locals = threading.local()
+
+def get_request_cache():
+    request_cache = getattr(_thread_locals, 'request_cache', None)
+    if not request_cache:
+        request_cache = defaultdict(lambda: None)
+        _thread_locals.request_cache = request_cache
+    return request_cache
