@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 import os
 import hashlib
+import csv
 import operator
 import re
 
@@ -18,6 +19,22 @@ from django.utils.http import urlquote
 from functional import compose
 
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat
+
+
+"""
+Wrapper around csv reader that ignores non utf-8 chars and strips the record
+"""
+class CsvReader(object):
+    def __init__(self, file_name, delimiter=','):
+        self.reader = csv.reader(open(file_name, 'rbU'), delimiter=delimiter)
+ 
+    def __iter__(self):
+        return self
+
+    def next(self):
+        row = self.reader.next()       
+        row = [el.decode('utf8', errors='ignore').replace('\"', '').strip() for el in row]
+        return row
 
 
 def get_image_filename(prefix, obj, filename):
