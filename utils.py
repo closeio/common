@@ -203,9 +203,10 @@ def get_search_q(fields, kw):
 
 # Like reverse(), but returns an full URL 
 def full_reverse(*args, **kwargs):
+    domain = kwargs.pop('rewrite_domain', None)
     return 'http%s://%s%s' % (
         use_ssl() and 's' or '',
-        Site.objects.get_current().domain,
+        domain or Site.objects.get_current().domain,
         reverse(*args, **kwargs)
     )
 
