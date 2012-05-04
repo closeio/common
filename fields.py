@@ -409,3 +409,8 @@ class CountryField(models.CharField):
         return "CharField"
 
 
+
+add_introspection_rules([], ["^common\.fields\.BlobField"])
+class BlobField(models.TextField):
+    def db_type(self):
+        return 'longblob'
