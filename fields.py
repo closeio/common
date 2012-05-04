@@ -412,5 +412,9 @@ class CountryField(models.CharField):
 
 add_introspection_rules([], ["^common\.fields\.BlobField"])
 class BlobField(models.TextField):
-    def db_type(self):
-        return 'longblob'
+    def db_type(self, connection):
+        if connection.settings_dict['ENGINE'] == 'django.db.backends.mysql':
+            return 'longblob'
+        else:
+            # Uh, whatever.
+            return super(BlobField, self).db_type(connection)
