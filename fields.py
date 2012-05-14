@@ -2,6 +2,7 @@ import datetime
 from django import forms
 from django.db import models, router
 from django.utils import simplejson as json
+from django.forms.util import from_current_timezone
 from django.utils.translation import ugettext as _
 from django.core.exceptions import ValidationError
 
