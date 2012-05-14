@@ -1,7 +1,9 @@
+import datetime
 from django import forms
 from django.db import models, router
 from django.utils import simplejson as json
 from django.utils.translation import ugettext as _
+from django.core.exceptions import ValidationError
 
 from phonenumbers import PhoneNumber
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
@@ -9,6 +11,34 @@ from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat
 from south.modelsinspector import add_introspection_rules
 
 from common.utils import dumps, loads, Encoder, format_us_phone_number
+
+
+class FlexibleDateTimeField(forms.DateTimeField):
+    """
+    Extends forms.DateTimeField to accept 12-hour (AM/PM) clock times also.
+    """
+
+    def to_python(self, value):
+        try:
+            result = super(FlexibleDateTimeField, self).to_python(value)
+            return from_current_timezone(result)
+        except ValidationError as e:
+            pass
+        try:
+            return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
+        except:
+            pass
+        raise ValidationError("invalid date time, does not match any formats")
+
+    input_formats = list(forms.DateTimeField.input_formats)+[
+        '%Y-%m-%dT%H:%M:%SZ',
+        '%Y-%m-%dT%H:%M:%S',
+        # add in some 12-hour clock formats
+        '%m/%d/%Y %I:%M%p',
+        '%m/%d/%Y %I:%M %p',
+        '%m/%d/%y %I:%M%p',
+        '%m/%d/%y %I:%M %p',
+    ]
 
 
 class JSONWidget(forms.Textarea):
