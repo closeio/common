@@ -97,7 +97,8 @@ class JSONField(models.TextField):
 
 class TrimmedCharFormField(forms.CharField):
     def clean(self, value):
-        value = value.strip()
+        if value:
+            value = value.strip()
         return super(TrimmedCharFormField, self).clean(value)
 
 add_introspection_rules([], ["^common\.fields\.TrimmedCharField"])
