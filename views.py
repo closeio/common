@@ -93,6 +93,11 @@ class LoginRequiredMixin(object):
     def dispatch(self, *args, **kwargs):
         return super(LoginRequiredMixin, self).dispatch(*args, **kwargs)
 
+class StaffRequiredMixin(object):
+    @method_decorator(staff_member_required)
+    def dispatch(self, *args, **kwargs):
+        return super(StaffRequiredMixin, self).dispatch(*args, **kwargs)
+
 
 @staff_member_required
 def su(request, user_id):
